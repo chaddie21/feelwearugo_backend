@@ -20,6 +20,7 @@ from oauth2client.contrib.flask_util import UserOAuth2
 
 
 oauth2 = UserOAuth2()
+import model_pgslq
 
 
 def create_app(config, debug=False, testing=False, config_overrides=None):
@@ -36,13 +37,23 @@ def create_app(config, debug=False, testing=False, config_overrides=None):
     if not app.testing:
         logging.basicConfig(level=logging.INFO)
 
-    # Create a health check handler. Health checks are used when running on
-    # Google Compute Engine by the load balancer to determine which instances
-    # can serve traffic. Google App Engine also uses health checking, but
-    # accepts any non-500 response as healthy.
-    @app.route('/_ah/health')
-    def health_check():
-        return 'ok', 200
+    # Setup the data model.
+    with app.app_context():
+        model = model_pgslq
+        model.init_app(app)
+
+    @app.errorhandler(500)
+    def server_error(e):
+        return """
+            An internal error occurred: <pre>{}</pre>
+            See logs for full stacktrace.
+            """.format(e), 500
+
+    return app
+
+
+
+
 
 
 

@@ -13,15 +13,17 @@
 # limitations under the License.
 
 from flask import Flask, jsonify, request
-from vision import model_pgslq
-from flask_sqlalchemy import SQLAlchemy
-app = Flask(__name__)
 
+from flask_sqlalchemy import SQLAlchemy
+import config
+import vision
+from vision import create_app, model_pgslq
+app = create_app(config)
 
 
 model = model_pgslq
 
-@app.route('/')
+@app.route('/test/')
 def index():
         # conn = model.open_db_connection()
         # cur = conn.cursor()
@@ -73,6 +75,16 @@ def get_node():
     id = request.args.get("a")
     return  model.get_node_by_id(id)
 
+@app.route('/edge/', methods=['GET'])
+def get_edge():
+    id = request.args.get("a")
+    return  model.get_edge_by_id(id)
+
+@app.route('/pass/', methods=['GET'])
+def see_if_edge_isPassable():
+    id = request.args.get("a")
+    return model.set_edge_passable(id)
+
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=8080)
+    app.run(host='127.0.0.1', port=8080, debug=True)

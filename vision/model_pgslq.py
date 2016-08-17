@@ -2,6 +2,8 @@ import psycopg2
 import query_strings
 from flask import jsonify
 from flask_sqlalchemy import SQLAlchemy
+import re
+
 from datetime import datetime
 # from main import app
 builtin_list = list
@@ -12,11 +14,11 @@ def init_app(app):
 
 
 class Node(db.Model):
-    _tablename_ = 'node'
+    __tablename__ = "node"
 
     node_id = db.Column(db.Integer, primary_key=True)
     name =  db.Column(db.String(255))
-    contact_number = db.Column(db.String(255))
+    phone_contact = db.Column(db.String(255))
     address =  db.Column(db.String(255))
     purpose_description =  db.Column(db.String(255))
     isPlace =  db.Column(db.String(255))
@@ -30,7 +32,7 @@ class Node(db.Model):
     def __init__(self,name,contact_number,address,purpose_description, isPlace,isBusTerminal,isRestRoom,
                  isIntersection,latitude,longitude,altitude):
         self.name = name
-        self.contact_number = contact_number
+        self.phone_contact = contact_number
         self.address = address
         self.purpose_description = purpose_description
         self.isPlace = isPlace
@@ -41,13 +43,13 @@ class Node(db.Model):
         self.longitude = longitude
         self.altitude = altitude
 
-    def _repr_(self):
+    def __repr__(self):
         return "<node_id: %s>" %(self.node_id)
 
-    def get_node_json(self):
+    def to_json(self):
         return jsonify(node_id = self.node_id,
                        name = self.name,
-                       contact_number = self.contact_number,
+                       contact_number = self.phone_contact,
                        address = self.address,
                        purpose_description  = self.purpose_description,
                        isPlace = self.isPlace,
@@ -70,7 +72,54 @@ class Node(db.Model):
         else:
             return -1
 
+class Edge(db.Model):
+    __tablename__ = 'edge_data'
 
+    edge_id =  db.Column(db.Integer(), primary_key=True)
+    start_node = db.Column(db.Integer())
+    end_node = db.Column(db.Integer())
+    length = db.Column(db.String())
+    reverse_length = db.Column(db.String())
+    isRoad = db.Column(db.String())
+    hasPedestrian =  db.Column(db.String())
+    hasStreetConnect =  db.Column(db.String())
+    isPassable =  db.Column(db.String())
+
+    def __init__(self, edge_id, start_node, end_node,length,reverse_length, isRoad, hasPedestrian, hasStreetConnect,
+                 isPassable):
+        self.edge_id = edge_id
+        self.start_node = start_node
+        self.end_node  = end_node
+        self.length =length
+        self.reverse_length= reverse_length
+        self.isRoad= isRoad
+        self.hasPedestrian= hasPedestrian
+        self.hasStreetConnect= hasStreetConnect
+        self.isPassable= isPassable
+
+    def __repr__(self):
+        return "<start_node: %s, target_node: %s>" %(self.start_node, self.end_node)
+
+    def to_json(self):
+        return jsonify(
+            edge_id = self.edge_id,
+            start_node = self.start_node,
+            end_node = self.end_node,
+            length = self.length,
+            reverse_length = self.reverse_length,
+            isRoad = self.isRoad,
+            hasPedestrian = self.hasPedestrian,
+            hasStreetConnect = self.hasStreetConnect,
+            isPassable = self.isPassable
+        )
+    def passable(self):
+        self.isPassable = True
+
+    def impassable(self):
+        self.isPassable = False
+
+    def is_passable(self):
+        return self.isPassable
 
 def open_db_connection():
     connection = psycopg2.connect(
@@ -151,7 +200,16 @@ def adjustEdgeWeight(edge_id, state=True):
     return data
 
 def get_node_by_id(id):
-    return  Node.query.get(id).get_node_json()
+    return  Node.query.get(id).to_json()
+
+def get_edge_by_id(id):
+    return Edge.query.get(id).to_json()
+
+def set_edge_passable(id, isPassable = True):
+    edge = Edge.query.get(id)
+    edge.isPassable = isPassable
+    db.session.commit()
+
 
 
 
